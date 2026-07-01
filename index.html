@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>毛概题库刷题系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warn: #f59e0b;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .container { max-width: 880px; margin: 0 auto; padding: 20px; }
+
+  .hero {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    color: #fff;
+    border-radius: 16px;
+    padding: 36px 28px;
+    text-align: center;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px rgba(37,99,235,.25);
+  }
+  .hero h1 { font-size: 28px; margin-bottom: 8px; }
+  .hero p { opacity: .92; font-size: 15px; }
+  .stats-row {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    margin-top: 18px;
+  }
+  .stat-chip {
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(6px);
+    padding: 8px 16px; border-radius: 999px; font-size: 14px;
+  }
+  .stat-chip.link { cursor: pointer; }
+
+  .section-title { font-size: 18px; margin: 24px 0 12px; font-weight: 600; }
+
+  .mode-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .mode-card {
+    background: var(--card); border: 2px solid var(--border); border-radius: 12px;
+    padding: 20px; cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .mode-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.06); }
+  .mode-card .icon { font-size: 30px; margin-bottom: 8px; }
+  .mode-card .name { font-weight: 600; font-size: 16px; }
+  .mode-card .desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .chapter-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .chapter-card {
+    background: var(--card); border: 2px solid var(--border); border-radius: 10px;
+    padding: 14px; cursor: pointer; transition: all .2s;
+  }
+  .chapter-card:hover { border-color: var(--primary); background: #eff6ff; }
+  .chapter-card .ch-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .chapter-card .ch-count { font-size: 12px; color: var(--muted); }
+  .chapter-card .ch-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .chapter-card .ch-bar-fill { height: 100%; background: var(--success); width: 0%; transition: width .3s; }
+
+  .quiz-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .progress-info { font-size: 14px; color: var(--muted); }
+  .progress-info b { color: var(--text); }
+  .btn {
+    border: none; padding: 9px 18px; border-radius: 8px; font-size: 14px;
+    cursor: pointer; transition: all .15s; font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--primary); transition: width .3s; }
+
+  .question-card {
+    background: var(--card); border-radius: 12px; padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04); margin-bottom: 16px;
+  }
+  .q-meta { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tag { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .tag-type-single { background: #dbeafe; color: #1e40af; }
+  .tag-type-multi { background: #fef3c7; color: #92400e; }
+  .tag-chapter { background: #e0e7ff; color: #3730a3; }
+  .tag-subject { background: #ede9fe; color: #6d28d9; }
+  .q-stem { font-size: 17px; font-weight: 500; margin-bottom: 18px; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+    border: 2px solid var(--border); border-radius: 10px; cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .option:hover { border-color: #94a3b8; background: #f8fafc; }
+  .option.selected { border-color: var(--primary); background: #eff6ff; }
+  .option.correct { border-color: var(--success); background: #f0fdf4; }
+  .option.wrong { border-color: var(--danger); background: #fef2f2; }
+  .option.disabled { cursor: default; }
+  .option-letter {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 14px; color: var(--muted);
+  }
+  .option.selected .option-letter { background: var(--primary); color: #fff; }
+  .option.correct .option-letter { background: var(--success); color: #fff; }
+  .option.wrong .option-letter { background: var(--danger); color: #fff; }
+  .option-text { flex: 1; font-size: 15px; padding-top: 3px; }
+
+  .feedback {
+    margin-top: 16px; padding: 14px 16px; border-radius: 10px; font-size: 14px;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .feedback.wrong { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .feedback .ans-label { font-weight: 600; }
+
+  .quiz-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; }
+  .submit-bar { text-align: center; margin-top: 16px; }
+
+  .result-card {
+    background: var(--card); border-radius: 16px; padding: 32px; text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06); max-width: 560px; margin: 40px auto;
+  }
+  .result-score { font-size: 56px; font-weight: 700; margin: 12px 0; }
+  .result-score.pass { color: var(--success); }
+  .result-score.fail { color: var(--danger); }
+  .result-detail { color: var(--muted); margin-bottom: 20px; }
+  .result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .review-item {
+    background: var(--card); border-radius: 10px; padding: 16px; margin-bottom: 10px;
+    border-left: 4px solid var(--border);
+  }
+  .review-item.correct { border-left-color: var(--success); }
+  .review-item.wrong { border-left-color: var(--danger); }
+  .review-item .ri-stem { font-weight: 500; margin-bottom: 6px; font-size: 15px; }
+  .review-item .ri-ans { font-size: 13px; color: var(--muted); }
+
+  /* subject tabs */
+  .subject-tabs {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
+  }
+  .subject-tab {
+    flex: 1; max-width: 200px; padding: 14px 20px; border-radius: 12px;
+    border: 2px solid var(--border); background: var(--card); cursor: pointer;
+    text-align: center; transition: all .2s; font-size: 16px; font-weight: 600;
+    color: var(--muted);
+  }
+  .subject-tab:hover { border-color: var(--primary); color: var(--primary); }
+  .subject-tab.active {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    color: #fff; border-color: transparent;
+    box-shadow: 0 6px 18px rgba(37,99,235,.3);
+  }
+  .subject-tab .sub-count { font-size: 12px; font-weight: 400; opacity: .85; margin-top: 2px; }
+
+  /* 版本更新通知 */
+  .update-toast {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    color: #fff; padding: 12px 22px; border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(22,163,74,.4); z-index: 9999;
+    font-size: 14px; display: none; max-width: 90vw; text-align: center;
+  }
+  .update-toast.show { display: block; animation: slideDown .3s ease; }
+  @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  @media (max-width: 600px) {
+    .container { padding: 12px; }
+    .hero { padding: 24px 16px; }
+    .hero h1 { font-size: 22px; }
+    .question-card { padding: 16px; }
+    .q-stem { font-size: 16px; }
+    .subject-tab { padding: 10px 12px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="update-toast" id="updateToast"></div>
+<div class="container" id="app"></div>
+
+<script src="questions.js?v=20260702"></script>
+<script>
+(function(){
+  const ALL_Q = window.QUESTIONS || [];
+  const INIT_VERSION = window.QUESTIONS_VERSION || '';
+  const SUBJECTS = [...new Set(ALL_Q.map(q => q.subject))];
+  const LS_SUBJECT = 'maogai_subject';
+  const app = document.getElementById('app');
+
+  // 当前科目（保存到 localStorage）
+  let currentSubject = localStorage.getItem(LS_SUBJECT) || SUBJECTS[0] || '毛概';
+  if(!SUBJECTS.includes(currentSubject)) currentSubject = SUBJECTS[0];
+
+  // 当前科目下的题目
+  function Q(){ return ALL_Q.filter(q => q.subject === currentSubject); }
+  function chapters(){ return [...new Set(Q().map(q => q.chapter))]; }
+
+  let session = null;
+
+  const shuffle = arr => {
+    const a = [...arr];
+    for (let i = a.length-1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  };
+  const modeLabel = m => ({ seq:'顺序练习', rand:'随机练习', chapter:'章节练习', exam:'模拟考试', wrong:'错题巩固' }[m] || '练习');
+  const arraysEqual = (a,b) => a.length===b.length && a.every((x,i)=>x===b[i]);
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  // mastery tracking
+  const LS_KEY = 'maogai_mastered';
+  const getMastered = () => { try { return new Set(JSON.parse(localStorage.getItem(LS_KEY)||'[]')); } catch(e){ return new Set(); } };
+  const isMastered = id => getMastered().has(id);
+  function setMastered(id, val){
+    const s = getMastered();
+    if(val) s.add(id); else s.delete(id);
+    localStorage.setItem(LS_KEY, JSON.stringify([...s]));
+  }
+
+  const SUBJECT_INFO = {
+    '毛概': { title: '毛概题库刷题系统', sub: '毛泽东思想和中国特色社会主义理论体系概论 · 在线刷题' },
+    '习概': { title: '习概题库刷题系统', sub: '习近平新时代中国特色社会主义思想概论 · 在线刷题' }
+  };
+
+  // ---------- Home ----------
+  function renderHome(){
+    const list = Q();
+    const total = list.length;
+    const singleN = list.filter(q=>q.answer.length===1).length;
+    const multiN = list.filter(q=>q.answer.length>1).length;
+    const mastered = list.filter(q => isMastered(q.id)).length;
+    const info = SUBJECT_INFO[currentSubject] || { title: currentSubject + '题库', sub: '' };
+
+    // 科目切换 tabs
+    const tabsHtml = '<div class="subject-tabs">' +
+      SUBJECTS.map(s => {
+        const cnt = ALL_Q.filter(q => q.subject === s).length;
+        return '<div class="subject-tab' + (s===currentSubject?' active':'') + '" data-action="switchSubject" data-sub="' + encodeURIComponent(s) + '">' +
+          escapeHtml(s) +
+          '<div class="sub-count">' + cnt + ' 题</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+    const chCards = chapters().map(ch => {
+      const clist = list.filter(q=>q.chapter===ch);
+      const m = clist.filter(q=>isMastered(q.id)).length;
+      const pct = clist.length ? Math.round(m/clist.length*100) : 0;
+      return '<div class="chapter-card" data-action="chapter" data-ch="' + encodeURIComponent(ch) + '">' +
+        '<div class="ch-name">' + escapeHtml(ch) + '</div>' +
+        '<div class="ch-count">' + clist.length + '题 · 已掌握 ' + m + '/' + clist.length + '</div>' +
+        '<div class="ch-bar"><div class="ch-bar-fill" style="width:' + pct + '%"></div></div>' +
+        '</div>';
+    }).join('');
+
+    app.innerHTML =
+      tabsHtml +
+      '<div class="hero">' +
+        '<h1>' + escapeHtml(info.title) + '</h1>' +
+        '<p>' + escapeHtml(info.sub) + '</p>' +
+        '<div class="stats-row">' +
+          '<span class="stat-chip">共 ' + total + ' 题</span>' +
+          '<span class="stat-chip">单选 ' + singleN + ' 题</span>' +
+          '<span class="stat-chip">多选 ' + multiN + ' 题</span>' +
+          '<span class="stat-chip">已掌握 ' + mastered + ' 题</span>' +
+          '<span class="stat-chip link" data-action="reset">重置进度</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-title">练习模式</div>' +
+      '<div class="mode-grid">' +
+        '<div class="mode-card" data-action="mode" data-mode="seq"><div class="icon">📚</div><div class="name">顺序练习</div><div class="desc">按顺序刷全部题目</div></div>' +
+        '<div class="mode-card" data-action="mode" data-mode="rand"><div class="icon">🔀</div><div class="name">随机练习</div><div class="desc">打乱顺序练习</div></div>' +
+        '<div class="mode-card" data-action="mode" data-mode="wrong"><div class="icon">🎯</div><div class="name">错题巩固</div><div class="desc">只练答错的题</div></div>' +
+        '<div class="mode-card" data-action="mode" data-mode="exam"><div class="icon">📝</div><div class="name">模拟考试</div><div class="desc">随机20题 · 计分</div></div>' +
+      '</div>' +
+      '<div class="section-title">按章节练习</div>' +
+      '<div class="chapter-grid">' + chCards + '</div>';
+  }
+
+  function switchSubject(sub){
+    currentSubject = sub;
+    localStorage.setItem(LS_SUBJECT, sub);
+    session = null;
+    renderHome();
+    window.scrollTo(0,0);
+  }
+
+  // ---------- session start ----------
+  function startMode(mode){
+    const cur = Q();
+    let list;
+    if(mode==='seq') list = [...cur];
+    else if(mode==='rand') list = shuffle(cur);
+    else if(mode==='exam') list = shuffle(cur).slice(0, Math.min(20, cur.length));
+    else if(mode==='wrong'){
+      list = cur.filter(q => !isMastered(q.id));
+      if(list.length===0){ alert('当前科目暂无错题，全部题目已掌握！'); return; }
+    }
+    session = { mode, subject: currentSubject, list, idx:0, answers:{}, submitted:false };
+    renderQuiz();
+  }
+  function startChapter(ch){
+    session = { mode:'chapter', subject: currentSubject, chapter:ch, list: Q().filter(q=>q.chapter===ch), idx:0, answers:{}, submitted:false };
+    renderQuiz();
+  }
+  function exitQuiz(){ session = null; renderHome(); }
+
+  // ---------- quiz render ----------
+  function renderQuiz(){
+    const mode = session.mode;
+    const list = session.list;
+    const idx = session.idx;
+    const q = list[idx];
+    const total = list.length;
+    const pct = Math.round(idx/total*100);
+    const ans = session.answers[idx] || { picks:[], checked:false };
+    const isExam = mode==='exam';
+    const userPicks = ans.picks || [];
+    const reveal = !!ans.checked || (isExam && session.submitted);
+
+    const optLetters = Object.keys(q.options).sort();
+    const optsHtml = optLetters.map(L => {
+      let cls = 'option';
+      if(userPicks.includes(L) && !reveal) cls += ' selected';
+      if(reveal){
+        cls += ' disabled';
+        if(q.answer.includes(L)) cls += ' correct';
+        else if(userPicks.includes(L)) cls += ' wrong';
+      }
+      const clickAttr = reveal ? '' : ' data-action="pick" data-letter="' + L + '"';
+      return '<div class="' + cls + '"' + clickAttr + '>' +
+        '<div class="option-letter">' + L + '</div>' +
+        '<div class="option-text">' + escapeHtml(q.options[L]) + '</div>' +
+        '</div>';
+    }).join('');
+
+    let fbHtml = '';
+    if(reveal){
+      const correct = arraysEqual(userPicks.slice().sort(), q.answer.slice().sort());
+      fbHtml = '<div class="feedback show ' + (correct?'correct':'wrong') + '">' +
+        '<span class="ans-label">' + (correct?'回答正确 ✓':'回答错误 ✗') + '</span>' +
+        ' ｜ 正确答案：' + q.answer.join(' ') +
+        (q.answer.length>1 ? ' ｜ （多选题）' : '') +
+        '</div>';
+    }
+
+    const isMulti = q.answer.length > 1;
+    let actionBtn = '';
+    if(!isExam){
+      if(!ans.checked){
+        actionBtn = '<button class="btn btn-primary" data-action="check" ' + (userPicks.length===0?'disabled':'') + '>' + (isMulti?'提交答案':'确认答案') + '</button>';
+      } else {
+        actionBtn = '<button class="btn btn-success" data-action="next">' + (idx<total-1?'下一题':'查看结果') + '</button>';
+      }
+    }
+
+    const answeredN = Object.keys(session.answers).filter(k => session.answers[k].picks.length>0).length;
+    const navRight = (isExam && idx===total-1)
+      ? '<button class="btn btn-primary" data-action="submitExam">交卷</button>'
+      : '<button class="btn btn-ghost" data-action="next" ' + (idx===total-1?'disabled':'') + '>下一题</button>';
+
+    app.innerHTML =
+      '<div class="quiz-header">' +
+        '<button class="btn btn-ghost" data-action="exit">← 返回</button>' +
+        '<div class="progress-info"><b>' + modeLabel(mode) + '</b> · 第 <b>' + (idx+1) + '</b>/<b>' + total + '</b> 题' + (isExam ? ' · 已答 ' + answeredN : '') + '</div>' +
+      '</div>' +
+      '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="question-card">' +
+        '<div class="q-meta">' +
+          '<span class="tag tag-subject">' + escapeHtml(q.subject) + '</span>' +
+          '<span class="tag tag-chapter">' + escapeHtml(q.chapter) + '</span>' +
+          '<span class="tag ' + (q.answer.length>1?'tag-type-multi':'tag-type-single') + '">' + (q.answer.length>1?'多选题':'单选题') + '</span>' +
+        '</div>' +
+        '<div class="q-stem">' + (idx+1) + '. ' + escapeHtml(q.stem) + '</div>' +
+        '<div class="options">' + optsHtml + '</div>' +
+        fbHtml +
+        '<div class="submit-bar">' + actionBtn + '</div>' +
+      '</div>' +
+      '<div class="quiz-nav">' +
+        '<button class="btn btn-ghost" data-action="prev" ' + (idx===0?'disabled':'') + '>上一题</button>' +
+        navRight +
+      '</div>';
+  }
+
+  // ---------- actions ----------
+  function pick(letter){
+    if(!session || session.submitted) return;
+    const q = session.list[session.idx];
+    let ans = session.answers[session.idx] || { picks:[], checked:false };
+    if(ans.checked) return;
+    // 根据答案选项个数判断：1个=单选(选完即判分)，多个=多选(需手动提交)
+    const isSingle = q.answer.length === 1;
+    if(isSingle){
+      ans.picks = [letter];
+      ans.checked = true;
+      const correct = arraysEqual(ans.picks.slice().sort(), q.answer.slice().sort());
+      if(correct) setMastered(q.id, true);
+    } else {
+      if(ans.picks.includes(letter)) ans.picks = ans.picks.filter(x => x!==letter);
+      else ans.picks = [...ans.picks, letter];
+    }
+    session.answers[session.idx] = ans;
+    renderQuiz();
+  }
+  function checkAnswer(){
+    const q = session.list[session.idx];
+    const ans = session.answers[session.idx];
+    if(!ans || ans.picks.length===0) return;
+    ans.checked = true;
+    const correct = arraysEqual(ans.picks.slice().sort(), q.answer.slice().sort());
+    if(correct) setMastered(q.id, true);
+    renderQuiz();
+  }
+  function prev(){ if(session.idx>0){ session.idx--; renderQuiz(); } }
+  function next(){
+    const total = session.list.length;
+    if(session.idx < total-1){ session.idx++; renderQuiz(); }
+    else { if(session.mode==='exam') submitExam(); else showResult(); }
+  }
+  function submitExam(){
+    if(!confirm('确定要交卷吗？')) return;
+    session.submitted = true;
+    showResult();
+  }
+
+  function showResult(){
+    const list = session.list;
+    const total = list.length;
+    let correctN = 0;
+    list.forEach((q,i) => {
+      const a = session.answers[i] || { picks:[] };
+      const ok = arraysEqual((a.picks||[]).slice().sort(), q.answer.slice().sort());
+      if(ok){ correctN++; setMastered(q.id, true); }
+      else { setMastered(q.id, false); }
+    });
+    const wrongN = total - correctN;
+    const score = total ? Math.round(correctN/total*100) : 0;
+    const pass = score >= 60;
+    const mode = session.mode;
+
+    const wrongList = list.map((q,i) => {
+      const a = session.answers[i] || { picks:[] };
+      const ok = arraysEqual((a.picks||[]).slice().sort(), q.answer.slice().sort());
+      return { q, i, picks:a.picks||[], ok };
+    }).filter(x => !x.ok);
+
+    const reviewHtml = wrongList.length
+      ? '<div class="section-title" style="text-align:left;margin-top:24px;">错题回顾（' + wrongList.length + '题）</div>' +
+        wrongList.map(o => (
+          '<div class="review-item wrong">' +
+            '<div class="ri-stem">' + (o.i+1) + '. ' + escapeHtml(o.q.stem) + '</div>' +
+            '<div class="ri-ans">你的答案：' + (o.picks.length ? o.picks.join(' ') : '未作答') + ' ｜ 正确答案：' + o.q.answer.join(' ') + '</div>' +
+          '</div>'
+        )).join('')
+      : '<div style="margin-top:20px;color:var(--success);font-weight:600;">全部答对，太棒了！🎉</div>';
+
+    app.innerHTML =
+      '<div class="result-card">' +
+        '<div style="font-size:40px;">' + (pass?'🎊':'📊') + '</div>' +
+        '<div style="color:var(--muted);margin-top:8px;">' + modeLabel(mode) + ' · 结果</div>' +
+        '<div class="result-score ' + (pass?'pass':'fail') + '">' + score + '<span style="font-size:24px;">分</span></div>' +
+        '<div class="result-detail">共 ' + total + ' 题 ｜ 答对 <b style="color:var(--success)">' + correctN + '</b> 题 ｜ 答错 <b style="color:var(--danger)">' + wrongN + '</b> 题</div>' +
+        '<div class="result-actions">' +
+          '<button class="btn btn-primary" data-action="retry">再来一次</button>' +
+          '<button class="btn btn-ghost" data-action="practiceWrong">练错题</button>' +
+          '<button class="btn btn-ghost" data-action="exit">返回首页</button>' +
+        '</div>' +
+        reviewHtml +
+      '</div>';
+    window.scrollTo(0,0);
+  }
+
+  function retrySession(){
+    if(!session) return;
+    if(session.mode==='chapter') startChapter(session.chapter);
+    else startMode(session.mode);
+  }
+  function practiceWrong(){
+    if(!session) return;
+    const wrongIds = session.list.filter((q,i) => {
+      const a = session.answers[i] || { picks:[] };
+      return !arraysEqual((a.picks||[]).slice().sort(), q.answer.slice().sort());
+    }).map(q => q.id);
+    const list = Q.filter(q => wrongIds.includes(q.id));
+    if(list.length===0){ alert('没有错题！'); exitQuiz(); return; }
+    session = { mode:'wrong', list, idx:0, answers:{}, submitted:false };
+    renderQuiz();
+  }
+
+  // ---------- event delegation ----------
+  app.addEventListener('click', e => {
+    const el = e.target.closest('[data-action]');
+    if(!el) return;
+    const action = el.getAttribute('data-action');
+    switch(action){
+      case 'switchSubject': switchSubject(decodeURIComponent(el.getAttribute('data-sub'))); break;
+      case 'mode': startMode(el.getAttribute('data-mode')); break;
+      case 'chapter': startChapter(decodeURIComponent(el.getAttribute('data-ch'))); break;
+      case 'reset':
+        if(confirm('确定要重置所有掌握进度吗？此操作不可撤销。')){ localStorage.removeItem(LS_KEY); renderHome(); }
+        break;
+      case 'pick': pick(el.getAttribute('data-letter')); break;
+      case 'check': checkAnswer(); break;
+      case 'prev': prev(); break;
+      case 'next': next(); break;
+      case 'exit': exitQuiz(); break;
+      case 'submitExam': submitExam(); break;
+      case 'retry': retrySession(); break;
+      case 'practiceWrong': practiceWrong(); break;
+    }
+  });
+
+  // ---------- 版本更新自动检测刷新 ----------
+  const toast = document.getElementById('updateToast');
+  let refreshing = false;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+  }
+  async function checkVersion(){
+    if(refreshing) return;
+    try {
+      // 带时间戳防缓存
+      const res = await fetch('questions.js?v=' + Date.now(), { cache: 'no-store' });
+      if(!res.ok) return;
+      const txt = await res.text();
+      const m = txt.match(/window\.QUESTIONS_VERSION\s*=\s*["']([^"']+)["']/);
+      const latest = m ? m[1] : '';
+      if(latest && INIT_VERSION && latest !== INIT_VERSION){
+        refreshing = true;
+        showToast('题库已更新，2 秒后自动刷新...');
+        setTimeout(() => location.reload(true), 2000);
+      }
+    } catch(e){ /* 忽略网络错误 */ }
+  }
+  // 每 30 秒检查一次
+  setInterval(checkVersion, 30000);
+  // 窗口重新获得焦点时立即检查
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) checkVersion(); });
+  window.addEventListener('focus', checkVersion);
+
+  renderHome();
+})();
+</script>
+</body>
+</html>

@@ -183,6 +183,13 @@
   }
   .subject-tab .sub-count { font-size: 12px; font-weight: 400; opacity: .85; margin-top: 2px; }
 
+  /* 翻译对照 */
+  .trans-unit { margin-bottom: 24px; }
+  .trans-unit-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .trans-pair { background: var(--card); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; border: 1px solid var(--border); }
+  .trans-en { font-size: 15px; line-height: 1.7; color: #1e293b; margin-bottom: 6px; }
+  .trans-zh { font-size: 14px; line-height: 1.7; color: var(--muted); }
+
   /* 版本更新通知 */
   .update-toast {
     position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
@@ -208,7 +215,7 @@
 <div class="update-toast" id="updateToast"></div>
 <div class="container" id="app"></div>
 
-<script src="questions.js?v=20260702"></script>
+<script src="questions.js?v=20260703"></script>
 <script>
 (function(){
   const ALL_Q = window.QUESTIONS || [];
@@ -250,29 +257,16 @@
   }
 
   const SUBJECT_INFO = {
-    '毛概': { title: '毛概题库刷题系统', sub: '毛泽东思想和中国特色社会主义理论体系概论 · 在线刷题' },
-    '习概': { title: '习概题库刷题系统', sub: '习近平新时代中国特色社会主义思想概论 · 在线刷题' }
+    '英语': { title: '英语题库刷题系统', sub: '听力 · 阅读 · 事实与观点 · 名词化 · 翻译对照' }
   };
 
   // ---------- Home ----------
   function renderHome(){
     const list = Q();
     const total = list.length;
-    const singleN = list.filter(q=>q.answer.length===1).length;
-    const multiN = list.filter(q=>q.answer.length>1).length;
     const mastered = list.filter(q => isMastered(q.id)).length;
     const info = SUBJECT_INFO[currentSubject] || { title: currentSubject + '题库', sub: '' };
-
-    // 科目切换 tabs
-    const tabsHtml = '<div class="subject-tabs">' +
-      SUBJECTS.map(s => {
-        const cnt = ALL_Q.filter(q => q.subject === s).length;
-        return '<div class="subject-tab' + (s===currentSubject?' active':'') + '" data-action="switchSubject" data-sub="' + encodeURIComponent(s) + '">' +
-          escapeHtml(s) +
-          '<div class="sub-count">' + cnt + ' 题</div>' +
-        '</div>';
-      }).join('') +
-    '</div>';
+    const hasTranslations = (window.TRANSLATIONS || []).length > 0;
 
     const chCards = chapters().map(ch => {
       const clist = list.filter(q=>q.chapter===ch);
@@ -285,15 +279,16 @@
         '</div>';
     }).join('');
 
+    const transCard = hasTranslations
+      ? '<div class="mode-card" data-action="translation"><div class="icon">🌐</div><div class="name">翻译对照</div><div class="desc">英汉对照阅读</div></div>'
+      : '';
+
     app.innerHTML =
-      tabsHtml +
       '<div class="hero">' +
         '<h1>' + escapeHtml(info.title) + '</h1>' +
         '<p>' + escapeHtml(info.sub) + '</p>' +
         '<div class="stats-row">' +
           '<span class="stat-chip">共 ' + total + ' 题</span>' +
-          '<span class="stat-chip">单选 ' + singleN + ' 题</span>' +
-          '<span class="stat-chip">多选 ' + multiN + ' 题</span>' +
           '<span class="stat-chip">已掌握 ' + mastered + ' 题</span>' +
           '<span class="stat-chip link" data-action="reset">重置进度</span>' +
         '</div>' +
@@ -304,8 +299,9 @@
         '<div class="mode-card" data-action="mode" data-mode="rand"><div class="icon">🔀</div><div class="name">随机练习</div><div class="desc">打乱顺序练习</div></div>' +
         '<div class="mode-card" data-action="mode" data-mode="wrong"><div class="icon">🎯</div><div class="name">错题巩固</div><div class="desc">只练答错的题</div></div>' +
         '<div class="mode-card" data-action="mode" data-mode="exam"><div class="icon">📝</div><div class="name">模拟考试</div><div class="desc">随机20题 · 计分</div></div>' +
+        transCard +
       '</div>' +
-      '<div class="section-title">按章节练习</div>' +
+      '<div class="section-title">按板块练习</div>' +
       '<div class="chapter-grid">' + chCards + '</div>';
   }
 
@@ -336,6 +332,28 @@
     renderQuiz();
   }
   function exitQuiz(){ session = null; renderHome(); }
+
+  // ---------- 翻译对照视图 ----------
+  function renderTranslation(){
+    const units = window.TRANSLATIONS || [];
+    const unitsHtml = units.map(u => {
+      const pairs = u.pairs.map(p =>
+        '<div class="trans-pair">' +
+          '<div class="trans-en">' + escapeHtml(p.en) + '</div>' +
+          '<div class="trans-zh">' + escapeHtml(p.zh) + '</div>' +
+        '</div>'
+      ).join('');
+      return '<div class="trans-unit">' +
+        '<div class="trans-unit-title">' + escapeHtml(u.unit) + '</div>' +
+        pairs +
+      '</div>';
+    }).join('');
+
+    app.innerHTML =
+      '<div style="margin-bottom:16px"><button class="btn" data-action="backHome">← 返回首页</button></div>' +
+      '<div class="hero" style="margin-bottom:20px"><h1>翻译对照</h1><p>英汉双语对照阅读</p></div>' +
+      unitsHtml;
+  }
 
   // ---------- quiz render ----------
   function renderQuiz(){
@@ -368,12 +386,20 @@
 
     let fbHtml = '';
     if(reveal){
-      const correct = arraysEqual(userPicks.slice().sort(), q.answer.slice().sort());
-      fbHtml = '<div class="feedback show ' + (correct?'correct':'wrong') + '">' +
-        '<span class="ans-label">' + (correct?'回答正确 ✓':'回答错误 ✗') + '</span>' +
-        ' ｜ 正确答案：' + q.answer.join(' ') +
-        (q.answer.length>1 ? ' ｜ （多选题）' : '') +
-        '</div>';
+      if(q.answer.length === 0){
+        // 无标准答案
+        fbHtml = '<div class="feedback show" style="background:#f1f5f9;color:#475569;border-left:3px solid #94a3b8">' +
+          '<span class="ans-label">本题无标准答案</span>' +
+          ' ｜ 你选择了：' + userPicks.join(' ') +
+          '</div>';
+      } else {
+        const correct = arraysEqual(userPicks.slice().sort(), q.answer.slice().sort());
+        fbHtml = '<div class="feedback show ' + (correct?'correct':'wrong') + '">' +
+          '<span class="ans-label">' + (correct?'回答正确 ✓':'回答错误 ✗') + '</span>' +
+          ' ｜ 正确答案：' + q.answer.join(' ') +
+          (q.answer.length>1 ? ' ｜ （多选题）' : '') +
+          '</div>';
+      }
     }
 
     const isMulti = q.answer.length > 1;
@@ -420,6 +446,14 @@
     const q = session.list[session.idx];
     let ans = session.answers[session.idx] || { picks:[], checked:false };
     if(ans.checked) return;
+    // 无标准答案的题：选完即结束，不判分
+    if(q.answer.length === 0){
+      ans.picks = [letter];
+      ans.checked = true;
+      session.answers[session.idx] = ans;
+      renderQuiz();
+      return;
+    }
     // 根据答案选项个数判断：1个=单选(选完即判分)，多个=多选(需手动提交)
     const isSingle = q.answer.length === 1;
     if(isSingle){
@@ -459,14 +493,17 @@
     const list = session.list;
     const total = list.length;
     let correctN = 0;
+    let scoredN = 0;
     list.forEach((q,i) => {
+      if(q.answer.length === 0) return; // 无标准答案不计分
+      scoredN++;
       const a = session.answers[i] || { picks:[] };
       const ok = arraysEqual((a.picks||[]).slice().sort(), q.answer.slice().sort());
       if(ok){ correctN++; setMastered(q.id, true); }
       else { setMastered(q.id, false); }
     });
-    const wrongN = total - correctN;
-    const score = total ? Math.round(correctN/total*100) : 0;
+    const wrongN = scoredN - correctN;
+    const score = scoredN ? Math.round(correctN/scoredN*100) : 0;
     const pass = score >= 60;
     const mode = session.mode;
 
@@ -539,6 +576,8 @@
       case 'submitExam': submitExam(); break;
       case 'retry': retrySession(); break;
       case 'practiceWrong': practiceWrong(); break;
+      case 'translation': renderTranslation(); break;
+      case 'backHome': renderHome(); break;
     }
   });
 
